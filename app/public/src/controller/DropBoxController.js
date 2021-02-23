@@ -51,6 +51,8 @@ class DropBoxController{
         
     }
 
+
+    
     uploadComplete()    
     {
         this.modalShow(false);
@@ -78,6 +80,7 @@ class DropBoxController{
         });
     }
 
+    
     connectFirebase()
     {
         
@@ -112,7 +115,53 @@ class DropBoxController{
             <div class="name text-center">${file.name}</div>
         </li>
     `
+
+        this.initEventsLi(li);
         return li;
+    }
+
+    initEventsLi(li)
+    {
+        li.addEventListener('click', e=>{
+
+            if(e.shiftKey)
+            {
+                let firstLi = this.listFilesEl.querySelector('.selected');
+
+
+                if(firstLi)
+                {
+                    let indexStart;
+                    let indexEnd;
+
+                    let listItems = li.parentElement.childNodes;
+
+                    listItems.forEach((elemento, index) =>{
+                        if(firstLi === elemento) indexStart = index;
+                        if(li === elemento) indexEnd = index;
+                    });
+
+                    let indexList = [indexStart, indexEnd].sort();
+                    
+
+                    listItems.forEach((element, index)=>{
+                        if(index >= indexList[0] && index <= indexList[1]){
+                            element.classList.add('selected');
+                        }
+                    });
+                    
+                    return true;
+                   
+                }
+            }
+            if(!e.ctrlKey)
+            {
+                this.listFilesEl.querySelectorAll('li.selected').forEach(element =>{
+                    element.classList.remove('selected');
+                });
+            }
+            li.classList.toggle('selected');
+        });
     }
 
     getFileIconView(file)
