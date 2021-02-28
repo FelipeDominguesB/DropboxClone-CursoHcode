@@ -30,7 +30,9 @@ class DropBoxController{
         
         this.connectFirebase();
         this.initEvents();
-        this.readFiles();
+
+        this.openFolder();
+        
     }
 
     getSelection()
@@ -136,16 +138,10 @@ class DropBoxController{
                 this.uploadComplete();
                 console.log(err);
             });
-
             this.modalShow(true);
             this.inputFileElement.value = '';
-
-        });
-
-        
+        });   
     }
-
-
     
     uploadComplete()    
     {
@@ -155,21 +151,22 @@ class DropBoxController{
 
     }
 
-    getFirebaseRef()
+    getFirebaseRef(path)
     {
-        return firebase.database().ref('files');
+        if(!path) path = this.currentFolder.join('/');
+        return firebase.database().ref(path);
     }
 
     readFiles()
     {
-        return this.getFirebaseRef().on('value', snapshot =>{
+        this.lastFolder = this.currentFolder.join('/');
+        this.getFirebaseRef().on('value', snapshot =>{
             this.listFilesEl.innerHTML = '';
             snapshot.forEach(snapshotItem =>{
                 let key = snapshotItem.key;
                 let data = snapshotItem.val();
-                console.log(key, data);
-
-                this.listFilesEl.appendChild(this.getFileView(data, key));
+                
+                if(data.type) this.listFilesEl.appendChild(this.getFileView(data, key));
             });
         });
     }
@@ -215,12 +212,36 @@ class DropBoxController{
         return li;
     }
 
+
+    openFolder()
+    {
+        if(this.lastFolder)
+        {
+            this.getFirebaseRef(this.lastFolder).off('value');
+        }
+        this.readFiles();
+    }
+
     initEventsLi(li)
     {
-        li.addEventListener('click', e=>{
-            
 
-            
+        li.addEventListener('dblclick', ()=>{
+            let file = JSON.parse(li.dataset.file);
+
+            switch(file.type)
+            {
+                case 'folder':
+                    this.currentFolder.push(file.name);
+                    this.openFolder();
+                    break;
+                
+                default:
+                    window.open('/file?path=' + file.path);
+                    break;
+            }
+        });
+
+        li.addEventListener('click', e=>{
             if(e.shiftKey)
             {
                 let firstLi = this.listFilesEl.querySelector('.selected');
