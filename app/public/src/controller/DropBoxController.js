@@ -1,13 +1,17 @@
 class DropBoxController{
 
+
+    //Construtor da classe
     constructor()
     {
+        //Começa o folder no root, que aqui se chama HQ code
         this.currentFolder = ['hcode'];
 
         this.navEl = document.querySelector('#browse-location');
 
-        this.btnSendFilesElements = document.querySelector('#btn-send-file');
 
+        //Botão de enviar arquivos que utiliza um input de arquivos invisivel
+        this.btnSendFilesElements = document.querySelector('#btn-send-file');
         this.inputFileElement = document.querySelector('#files');
 
         this.snackModalElement = document.querySelector('#react-snackbar-root');
@@ -17,14 +21,19 @@ class DropBoxController{
 
         this.onselectionchange = new Event('selectionchange');
 
+
+        //Nome do arquivo e tempo restante de envio
         this.nameFileEl = document.querySelector('.filename');
         this.timeLeftEl = document.querySelector('.timeleft');
 
 
+        //Botões de criar nova apsta, renomear arquivos e deletar
         this.btnNewFolder = document.querySelector('#btn-new-folder');
         this.btnRename = document.querySelector('#btn-rename');
         this.btnDelete = document.querySelector('#btn-delete');
 
+
+        //View de arquivos e pastas no projeto
         this.listFilesEl = document.querySelector('#list-of-files-and-directories');
 
         
@@ -40,20 +49,29 @@ class DropBoxController{
         return this.listFilesEl.querySelectorAll('.selected');
     }
 
+    //Task pra remover coisas
     removeTask()
     {
+        //Cria uma array de promessas
         let promises = [];
+
+        //Pega todos os arquivos selecionados e faz um loop
         this.getSelection().forEach(li =>{
+
+            //Cada arquivo ele lê o dataset pra pegar as informações
             let file = JSON.parse(li.dataset.file);
 
             let key = li.dataset.key;
             let formData = new FormData();
             
+            //Ele então cria uma promessa que vai direto pro array
             promises.push(new Promise((resolve, reject)=>{
 
+                //Se for uma pasta
                 if(file.type === 'folder')
                 {
                     this.removeFolderTask(this.currentFolder.join('/'), file.name).then(()=>{
+                        //Termina a execução da tarefa e manda os valores removidos pelo resolve 
                         resolve({
                             fields:{
                                 key
@@ -61,9 +79,11 @@ class DropBoxController{
                         });
                     });
                 }
+                //Se for apenas um arquivo
                 else if(file.type)
                 {
                     removeFile(this.currentFolder.join('/'), file.name).then(()=>{
+                         //Termina a execução da tarefa e manda os valores removidos pelo resolve 
                         resolve({
                             fields:{
                                 key
@@ -74,10 +94,11 @@ class DropBoxController{
                 
             }));
         });
-
+        //retorna todas as promessas
         return Promise.all(promises);
     }
 
+    //Função para remover diretórios
     removeFolderTask(ref, name)
     {
         return new Promise((resolve, reject)=>{
@@ -119,23 +140,33 @@ class DropBoxController{
         });
     }
 
+    //Função pra remover arquivos
     removeFile(ref, name)
     {
+        //Cria uma referencia ao local do arquivo com nome
         let fileRef= firebase.storage().ref(ref).child(name);
         return fileRef.delete();
     }
+
+    //Inicializa os eventos dos botões
     initEvents()
     {
 
+        //Cria o evento de adicionar pasta
         this.btnNewFolder.addEventListener('click', ()=>{
+
+            //Prompt pega o nome que vai ser utilizado na pasta
             let name = prompt('Nome da nova pasta: ');
 
+
+            //Só prossegue se um nome for informado
             if(name)
             {
+                //Manda uma referencia do tipo folder para o banco de dados, com o nome informado
                 this.getFirebaseRef().push().set({
                     name,
                     type: 'folder',
-                    path: this.currentFolder.join('/')
+                    path: this.currentFolder.join('/') //Esse join junta todos os elementos do array colocando uma barra entre eles
                 })
             }
         });
@@ -153,14 +184,21 @@ class DropBoxController{
             });
         });
 
+
+        //Botão de renomear
         this.btnRename.addEventListener('click', ()=>{
+            //Pega o primeiro arquivo selecionado, no caso muito possivelmente o único que vai ter selecionado
             let li = this.getSelection()[0];
 
+            //Le o dataset do arquivo, pegando todas as informações e passa pra uma variável
             let file = JSON.parse(li.dataset.file);
+
+            //Pede o novo nome do arquivo
             let name = prompt('Renomear o arquivo:', file.name);
 
             if(name)
             {
+                //renomeia o arquivo
                 file.name = name;
                 this.getFirebaseRef().child(li.dataset.key).set(file);
             }
@@ -186,13 +224,20 @@ class DropBoxController{
                     
             }
         });
+
+        //O botão de enviar arquivos tá com um truquezinho pra clickar em um input file invisivel, achei legal
         this.btnSendFilesElements.addEventListener('click', (e) =>{
             this.inputFileElement.click();
         });
 
+
+        //Ok, aqui começa o processo do input de arquivos, primeiro ele é ativado na mudança de arquivos
         this.inputFileElement.addEventListener('change', (e) =>{
 
+            //O botão que ativa ele é desativado temporariamente
             this.btnSendFilesElements.disabled = true;
+
+            //Começa a tarefa de enviar
             this.uploadTask(e.target.files).then(response =>{
                 console.log('respostas: ', response);
 
@@ -609,15 +654,23 @@ class DropBoxController{
         
     }
 
+    //Tarefa de enviar uma série de arquivos
     uploadTask(files)
     {
+
+        //Cria uma array de promises
         let promises = [];
+
+        //Usa o spread pra transformar files em uma array, e depois cria um loop por cada um deles
         [...files].forEach((file) =>{
 
+            //Pra cada arquivo, adiciona uma promessa
             promises.push(new Promise((resolve, reject)=>{
                 
+                //Cria uma referência no firebase com o folder atual e o nome do arquivo
                 let fileref = firebase.storage().ref(this.currentFolder.join('/')).child(file.name);
                 
+                //Cria a tarefa de inserir o arquivo com a referência do firebase
                 let task = fileref.put(file);
 
                 task.on('state_changed', (snapshot)=>{
@@ -647,6 +700,8 @@ class DropBoxController{
                })
             }));   
         });
+        
+        //Retorna a resolução de todas as promessas ao mesmo tempo
         return Promise.all(promises);
 
     }
